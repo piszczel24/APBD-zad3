@@ -2,23 +2,19 @@
 
 namespace LegacyApp;
 
-public class UserService
+public class UserService(IClientRepository clientRepository, ICreditLimitService creditLimitService)
 {
-    private readonly IClientRepository _clientRepository;
-    private readonly ICreditLimitService _creditLimitService;
-    
     [Obsolete]
-    public UserService()
+    public UserService() : this(new ClientRepository(), new UserCreditService())
     {
-        _clientRepository = new ClientRepository();
-        _creditLimitService = new UserCreditService();
     }
+
 
     public bool AddUser(string firstName, string lastName, string email, DateTime dateOfBirth, int clientId)
     {
-        if (string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName)) return false;
+        if (!Validator.IsFirstNameAndLastNameValid(firstName, lastName)) return false;
 
-        if (!email.Contains('@') && !email.Contains('.')) return false;
+        if (!Validator.IsEmailAddressValid(email)) return false;
 
         var now = DateTime.Now;
         var age = now.Year - dateOfBirth.Year;
@@ -26,7 +22,7 @@ public class UserService
 
         if (age < 21) return false;
 
-        var client = _clientRepository.GetById(clientId);
+        var client = clientRepository.GetById(clientId);
 
         var user = new User
         {
@@ -44,7 +40,7 @@ public class UserService
                 break;
             case "ImportantClient":
             {
-                var creditLimit = _creditLimitService.GetCreditLimit(user.LastName, user.DateOfBirth);
+                var creditLimit = creditLimitService.GetCreditLimit(user.LastName, user.DateOfBirth);
                 creditLimit = creditLimit * 2;
                 user.CreditLimit = creditLimit;
                 break;
@@ -52,7 +48,7 @@ public class UserService
             default:
             {
                 user.HasCreditLimit = true;
-                var creditLimit = _creditLimitService.GetCreditLimit(user.LastName, user.DateOfBirth);
+                var creditLimit = creditLimitService.GetCreditLimit(user.LastName, user.DateOfBirth);
                 user.CreditLimit = creditLimit;
                 break;
             }
