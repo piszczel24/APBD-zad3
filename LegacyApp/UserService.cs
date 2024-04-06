@@ -2,10 +2,13 @@
 
 namespace LegacyApp;
 
-public class UserService(IClientRepository clientRepository, ICreditLimitService creditLimitService)
+public class UserService(
+    IClientRepository clientRepository,
+    ICreditLimitService creditLimitService,
+    IUserDataAccess userDataAccess)
 {
     [Obsolete]
-    public UserService() : this(new ClientRepository(), new UserCreditService())
+    public UserService() : this(new ClientRepository(), new UserCreditService(), new UserDataAccessAdapter())
     {
     }
 
@@ -16,11 +19,7 @@ public class UserService(IClientRepository clientRepository, ICreditLimitService
 
         if (!Validator.IsEmailAddressValid(email)) return false;
 
-        var now = DateTime.Now;
-        var age = now.Year - dateOfBirth.Year;
-        if (now.Month < dateOfBirth.Month || (now.Month == dateOfBirth.Month && now.Day < dateOfBirth.Day)) age--;
-
-        if (age < 21) return false;
+        if (!Validator.IsBirthDateValid(dateOfBirth)) return false;
 
         var client = clientRepository.GetById(clientId);
 
@@ -56,7 +55,7 @@ public class UserService(IClientRepository clientRepository, ICreditLimitService
 
         if (user.HasCreditLimit && user.CreditLimit < 500) return false;
 
-        UserDataAccess.AddUser(user);
+        userDataAccess.AddUser(user);
         return true;
     }
 }
